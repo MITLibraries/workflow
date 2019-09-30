@@ -1,0 +1,14 @@
+language: generic
+jobs:
+  include:
+    - stage: Test container build
+      before_install: pip install --user awscli
+      script: make dist
+    - stage: Deploy staging
+      install: pip install --user awscli
+      script: skip
+      before_deploy: make dist
+      deploy: 
+        skip_cleanup: true
+        provider: script
+        script: make publish
