@@ -6,7 +6,7 @@ verify_ssl = true
 [dev-packages]
 
 [packages]
-apache-airflow = {extras = ["celery", "password", "postgres"],version = "*"}
+apache-airflow = {extras = ["celery", "crypto", "password", "postgres"],version = "~=1.10.0"}
 psycopg2 = "*"
 click = "*"
 boto3 = "*"
