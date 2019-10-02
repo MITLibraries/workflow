@@ -25,3 +25,12 @@ $ pipenv install <dependencies>
 $ make dist
 $ docker-compose down && docker-compose up
 ```
+
+## Cluster Maintenace
+
+This repo provides a `workflow` command for doing various maintenance tasks on the Fargate cluster. These mostly include user functions and database migrations. You will need to have AWS authentication configured on your machine to use this. To use the command:
+
+```
+$ pipenv install
+$ pipenv run workflow
+```

@@ -6,10 +6,10 @@ services:
     depends_on:
       - db
     environment:
-      AIRFLOW_FIRST_RUN: "yes"
       AIRFLOW__CORE__DAGS_FOLDER: "/airflow/dags"
       AIRFLOW__CORE__LOAD_EXAMPLES: "False"
       AIRFLOW__CORE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://postgres@db/postgres"
+    command: ["initdb"]
   db:
    image: postgres
    volumes:

@@ -12,14 +12,4 @@ flush_logs()
   exit $code
 }
 
-initialize()
-{
-  if [ -n "$AIRFLOW_FIRST_RUN" ]; then
-    airflow initdb
-    exit
-  else
-    airflow upgradedb
-  fi
-}
-
-initialize && airflow "$@"
+airflow "$@"

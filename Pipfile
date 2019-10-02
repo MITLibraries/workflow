@@ -8,6 +8,11 @@ verify_ssl = true
 [packages]
 apache-airflow = {extras = ["celery", "password", "postgres"],version = "*"}
 psycopg2 = "*"
+click = "*"
+boto3 = "*"
 
 [requires]
 python_version = "3.7"
+
+[scripts]
+workflow = "python -c \"from manager.cli import main; main()\""
