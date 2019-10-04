@@ -7,20 +7,54 @@ services:
       - "8080:8080"
     depends_on:
       - db
+      - redis
     environment:
+      AIRFLOW__CORE__DAGS_FOLDER: "/airflow/dags"
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__EXECUTOR: "CeleryExecutor"
+      AIRFLOW__CELERY__BROKER_URL: "redis://redis:6379"
+      AIRFLOW__CELERY__RESULT_BACKEND: "db+postgresql://postgres@db/postgres"
       AIRFLOW__CORE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://postgres@db/postgres"
+      AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: 30
     command: ["webserver"]
+    volumes:
+      - type: bind
+        source: ./workflows
+        target: /airflow/dags
   scheduler:
     image: airflow
     build: .
     depends_on:
       - db
+      - redis
     environment:
       AIRFLOW__CORE__DAGS_FOLDER: "/airflow/dags"
       AIRFLOW__CORE__LOAD_EXAMPLES: "False"
       AIRFLOW__CORE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://postgres@db/postgres"
       AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: 30
+      AIRFLOW__CORE__EXECUTOR: "CeleryExecutor"
+      AIRFLOW__CELERY__BROKER_URL: "redis://redis:6379"
+      AIRFLOW__CELERY__RESULT_BACKEND: "db+postgresql://postgres@db/postgres"
     command: ["scheduler"]
+    volumes:
+      - type: bind
+        source: ./workflows
+        target: /airflow/dags
+  worker:
+    image: airflow
+    build: .
+    depends_on:
+      - db
+      - redis
+    environment:
+      AIRFLOW__CORE__DAGS_FOLDER: "/airflow/dags"
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://postgres@db/postgres"
+      AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: 30
+      AIRFLOW__CORE__EXECUTOR: "CeleryExecutor"
+      AIRFLOW__CELERY__BROKER_URL: "redis://redis:6379"
+      AIRFLOW__CELERY__RESULT_BACKEND: "db+postgresql://postgres@db/postgres"
+    command: ["worker"]
     volumes:
       - type: bind
         source: ./workflows
@@ -31,5 +65,7 @@ services:
      - type: volume
        source: db
        target: /var/lib/postgresql/data
+  redis:
+    image: redis
 volumes:
   db:

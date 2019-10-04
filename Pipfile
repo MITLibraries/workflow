@@ -10,6 +10,7 @@ apache-airflow = {extras = ["celery", "crypto", "password", "postgres"],version 
 psycopg2 = "*"
 click = "*"
 boto3 = "*"
+redis = "*"
 
 [requires]
 python_version = "3.7"
