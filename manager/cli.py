@@ -1,22 +1,24 @@
 from contextlib import contextmanager
 import sys
 
-import boto3
+from botocore import waiter as boto_waiter
 import click
+
+from manager.cluster import Cluster, ecs_model
 
 
 @click.group()
-@click.option('--environment', default='stage',
-              help='Terraform workspace (stage or prod). Defaults to stage.')
-@click.option('--cluster', default='airflow',
-              help='Fargate cluster name (without TF workspace). Defaults to '
-                   'airflow.')
-@click.option('--service', default='scheduler',
-              help='Fargate service name (without TF workspace or cluster). '
-                   'This should be one of web, scheduler or worker. Defaults '
-                   'to scheduler.')
+@click.option('--cluster', default='airflow-stage',
+              help='Fargate cluster name. Defaults to airflow-stage.')
+@click.option('--scheduler', default='airflow-stage-scheduler',
+              help='Name of scheduler service. Defaults to '
+                   'airflow-stage-scheduler.')
+@click.option('--worker', default='airflow-stage-worker',
+              help='Name of worker service. Defaults to airflow-stage-worker.')
+@click.option('--web', default='airflow-stage-web',
+              help='Name of web service. Defaults to airflow-stage-web.')
 @click.pass_context
-def main(ctx, environment, cluster, service):
+def main(ctx, cluster, scheduler, worker, web):
     """Run one-off tasks on a Fargate Airflow cluster.
 
     This tool can be used to run certain Airflow tasks on a Fargate cluster
@@ -24,20 +26,14 @@ def main(ctx, environment, cluster, service):
     container using the same image used by the other Airflow containers.
 
     In order to get an appropriate network configuration it examines one
-    of the existing services. The cluster and service names it uses are
-    CLUSTER-ENVIRONMENT and CLUSTER-ENVIRONMENT-SERVICE, respectively.
+    of the existing services. All three services should have the same
+    network configuration.
 
     The tool only schedules a task to be run. Check the AWS console to see
     if the container ran successfully.
     """
-    ecs = boto3.client('ecs')
-    ecs_cluster = f'{cluster}-{environment}'
-    ecs_service = f'{cluster}-{environment}-{service}'
-    cluster = Cluster(ecs_cluster, ecs_service, ecs)
-
+    cluster = Cluster(cluster, scheduler, worker, web)
     ctx.ensure_object(dict)
-    ctx.obj['main.cluster'] = ecs_cluster
-    ctx.obj['main.service'] = ecs_service
     ctx.obj['cluster'] = cluster
 
 
@@ -50,7 +46,16 @@ def main(ctx, environment, cluster, service):
 @click.password_option()
 @click.pass_context
 def add_user(ctx, username, email, firstname, lastname, role, password):
-    """Add an Airflow user."""
+    """Add an Airflow user.
+
+    Note that all parameters are required.
+
+    \b
+    Example usage:
+
+        $ workflow --cluster airflow-stage add-user -u foobar \
+            -e foobar@example.com -f Foo -l Bar -r Admin
+    """
     cluster = ctx.obj['cluster']
     command = ['create_user', '-u', username, '-e', email, '-f', firstname,
                '-l', lastname, '-p', password, '-r', role]
@@ -104,6 +109,11 @@ def initialize(ctx):
 
     This should only be run once on an Airflow cluster. It will run Airflow's
     initdb command.
+
+    \b
+    Example usage:
+
+        $ workflow --cluster airflow-stage initialize
     """
     cluster = ctx.obj['cluster']
     with check_task():
@@ -112,59 +122,58 @@ def initialize(ctx):
 
 
 @main.command()
-@click.confirmation_option(prompt='Are you sure you want to restart the '
-                                  'selected service?')
+@click.confirmation_option(prompt='Are you sure you want to redeploy the '
+                                  'selected cluster?')
+@click.option('--wait/--no-wait', default=True,
+              help='Wait until the cluster has fully restarted before '
+                   'exiting. This is the default behavior.')
 @click.pass_context
-def redeploy(ctx):
-    """Force redeploy of a service.
+def redeploy(ctx, wait):
+    """Redeploy Airflow cluster.
 
-    This will force Fargate to redeploy all tasks in the specified service.
-    Use this if a new container image has been deployed but the task
-    definition has not changed.
+    This will perform a full redeploy of the Airflow cluster. First, all
+    containers in all services are stopped. Then, all containers in all
+    services are restarted with a --force-new-deployment. A redeploy
+    should be done when new workflows are added. This is the only way to
+    sync the workflows across all containers.
 
-    Remember that there are three different services in an Airflow cluster:
-    web, scheduler and worker.
+    *IMPORTANT* You shouldn't try to force redeploy a single service as race
+    conditions could arise. Always use this command to redeploy as it will
+    ensure the system remains in a consistent state.
+
+    By default, the command will wait until the cluster has been fully
+    stopped and fully restarted until exiting. The --no-wait flag can be
+    used to exit as soon as the ECS request to scale back up has been made.
+
+    It may take several minutes for the cluster to fully restart. Be patient.
 
     \b
-    Example:
-        $ workflow --service web redeploy
+    Example usage:
+
+        $ workflow --cluster airflow-prod redeploy
     """
-    ecs = boto3.client('ecs')
+    cluster = ctx.obj['cluster']
+    stop_waiter = boto_waiter.create_waiter_with_client('ServiceDrained',
+                                                        ecs_model, cluster.ecs)
+    start_waiter = cluster.ecs.get_waiter('services_stable')
     with check_task():
-        resp = ecs.update_service(cluster=ctx.obj['main.cluster'],
-                                  service=ctx.obj['main.service'],
-                                  forceNewDeployment=True)
-    arn = resp['service']['serviceArn']
-    click.echo(f'Service restart scheduled: {arn}')
+        cluster.stop()
+        click.echo('Stopping cluster...', nl=False)
+        stop_waiter.wait(cluster=cluster.name, services=cluster.services)
+        click.echo("\033[1A")
+        ok = click.style('OK', fg='green')
+        click.echo(f'Stopping cluster...{ok}')
 
-
-class Cluster:
-    def __init__(self, cluster, service, client):
-        self.ecs = client
-        self.cluster = cluster
-        self.service = service
-
-    def run_task(self, overrides):
-        default_overrides = {'name': self.service}
-        default_overrides.update(overrides)
-        resp = self.ecs.run_task(
-                cluster=self.cluster,
-                taskDefinition=self.service,
-                overrides={'containerOverrides': [default_overrides]},
-                count=1,
-                launchType='FARGATE',
-                networkConfiguration=self.__config['networkConfiguration'])
-        return resp['tasks'][0]['taskArn']
-
-    @property
-    def __config(self):
-        if not hasattr(self, '__service'):
-            services = self.ecs.describe_services(cluster=self.cluster,
-                                                  services=[self.service])
-            if len(services['services']) == 0:
-                raise Exception(f'No service called {self.service}')
-            self.__service = services['services'][0]
-        return self.__service
+    with check_task():
+        cluster.start()
+        if not wait:
+            click.echo('Starting cluster...')
+            return
+        click.echo('Starting cluster...', nl=False)
+        start_waiter.wait(cluster=cluster.name, services=cluster.services)
+        click.echo("\033[1A")
+        ok = click.style('OK', fg='green')
+        click.echo(f'Starting cluster...{ok}')
 
 
 @contextmanager

@@ -1,11 +1,19 @@
-language: generic
+language: python
+python: 3.7
+env:
+  matrix:
+    - TOX_ENV=flake8
+    - TOX_ENV=safety
+    - TOX_ENV=py37
+    - TOX_ENV=coveralls
+install:
+  - pipenv install tox
+script:
+  - tox -e $TOX_ENV
 jobs:
   include:
-    - stage: Test container build
-      before_install: pip install --user awscli
-      script: make dist
-    - stage: Deploy staging
-      install: pip install --user awscli
+    - stage: Deploy
+      install: pip install awscli
       script: skip
       before_deploy: make dist
       deploy: 
