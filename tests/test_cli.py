@@ -92,11 +92,17 @@ def test_initializes_cluster(cluster, cluster_opts):
     assert command == ['initdb']
 
 
-def test_redeploys_cluster(cluster, cluster_opts):
+def test_stops_scheduler(cluster, cluster_opts):
     res = CliRunner().invoke(main, [
             *cluster_opts,
-            'redeploy',
-            '--yes',
+            'stop-scheduler',
+            '--yes'])
+    assert 'Stopping scheduler...OK' in res.output
+
+
+def test_starts_scheduler(cluster, cluster_opts):
+    res = CliRunner().invoke(main, [
+            *cluster_opts,
+            'start-scheduler',
             '--no-wait'])
-    assert 'Stopping cluster...OK' in res.output
-    assert 'Starting cluster...' in res.output
+    assert 'Starting scheduler...' in res.output

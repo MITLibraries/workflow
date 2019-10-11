@@ -1,4 +1,3 @@
-import boto3
 from botocore import waiter
 import jmespath
 
@@ -24,11 +23,12 @@ ecs_model = waiter.WaiterModel({
 
 
 class Cluster:
-    def __init__(self, cluster, scheduler, worker, web):
+    def __init__(self, cluster, scheduler, worker, web, client):
         self.name = cluster
         self.scheduler = scheduler
         self.worker = worker
         self.web = web
+        self.ecs = client
 
     def run_task(self, overrides):
         default_overrides = {'name': self.worker}
@@ -43,34 +43,22 @@ class Cluster:
                 networkConfiguration=self.__worker['networkConfiguration'])
         return resp['tasks'][0]['taskArn']
 
-    def stop(self):
-        # This needs to be set before stopping everything, because there
-        # will be a variable number of workers. We need to know how many
-        # to restart. This is a bit of hack because the value really needs
-        # to come from the Terraform config.
-        # TODO: Find a better way to handle this.
-        self.num_workers = self.__worker['desiredCount']
-        for service in self.services:
-            self.ecs.update_service(cluster=self.name, service=service,
+    def stop(self, services=None):
+        if services is None:
+            services = self.services
+        for service in services:
+            self.ecs.update_service(cluster=self.name,
+                                    service=service,
                                     desiredCount=0)
 
-    def start(self):
-        self.ecs.update_service(cluster=self.name,
-                                service=self.scheduler,
-                                desiredCount=1,
-                                forceNewDeployment=True)
-        self.ecs.update_service(cluster=self.name,
-                                service=self.web,
-                                desiredCount=1,
-                                forceNewDeployment=True)
-        self.ecs.update_service(cluster=self.name,
-                                service=self.worker,
-                                desiredCount=self.num_workers,
-                                forceNewDeployment=True)
-
-    @property
-    def ecs(self):
-        return boto3.client('ecs')
+    def start(self, services=None):
+        if services is None:
+            services = self.services
+        for service in services:
+            self.ecs.update_service(cluster=self.name,
+                                    service=service,
+                                    desiredCount=1,
+                                    forceNewDeployment=True)
 
     @property
     def services(self):

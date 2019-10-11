@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 import sys
 
+import boto3
 from botocore import waiter as boto_waiter
 import click
 
@@ -32,7 +33,8 @@ def main(ctx, cluster, scheduler, worker, web):
     The tool only schedules a task to be run. Check the AWS console to see
     if the container ran successfully.
     """
-    cluster = Cluster(cluster, scheduler, worker, web)
+    ecs = boto3.client('ecs')
+    cluster = Cluster(cluster, scheduler, worker, web, ecs)
     ctx.ensure_object(dict)
     ctx.obj['cluster'] = cluster
 
@@ -124,28 +126,22 @@ def initialize(ctx):
 @main.command()
 @click.confirmation_option(prompt='Are you sure you want to redeploy the '
                                   'selected cluster?')
-@click.option('--wait/--no-wait', default=True,
-              help='Wait until the cluster has fully restarted before '
-                   'exiting. This is the default behavior.')
 @click.pass_context
-def redeploy(ctx, wait):
+def redeploy(ctx):
     """Redeploy Airflow cluster.
 
-    This will perform a full redeploy of the Airflow cluster. First, all
-    containers in all services are stopped. Then, all containers in all
-    services are restarted with a --force-new-deployment. A redeploy
-    should be done when new workflows are added. This is the only way to
-    sync the workflows across all containers.
+    This will perform a full redeploy of the Airflow cluster. The cluster
+    has to be brought down and back up in a specific order or otherwise
+    race conditions could arise. First, the scheduler is stopped. Then,
+    the web and worker services are redeployed. Finally, the scheduler is
+    started back up with the new deployment.
 
-    *IMPORTANT* You shouldn't try to force redeploy a single service as race
-    conditions could arise. Always use this command to redeploy as it will
-    ensure the system remains in a consistent state.
+    *IMPORTANT* Always use this command to redeploy as it will ensure the
+    system remains in a consistent state. It should be safe to run again
+    even if it has previously failed partway through due to, for example,
+    a network failure.
 
-    By default, the command will wait until the cluster has been fully
-    stopped and fully restarted until exiting. The --no-wait flag can be
-    used to exit as soon as the ECS request to scale back up has been made.
-
-    It may take several minutes for the cluster to fully restart. Be patient.
+    It will take several minutes for the cluster to fully restart. Be patient.
 
     \b
     Example usage:
@@ -157,23 +153,86 @@ def redeploy(ctx, wait):
                                                         ecs_model, cluster.ecs)
     start_waiter = cluster.ecs.get_waiter('services_stable')
     with check_task():
-        cluster.stop()
-        click.echo('Stopping cluster...', nl=False)
-        stop_waiter.wait(cluster=cluster.name, services=cluster.services)
+        cluster.stop(services=[cluster.scheduler])
+        click.echo('Stopping scheduler.......', nl=False)
+        stop_waiter.wait(cluster=cluster.name, services=[cluster.scheduler])
         click.echo("\033[1A")
         ok = click.style('OK', fg='green')
-        click.echo(f'Stopping cluster...{ok}')
+        click.echo(f'Stopping scheduler.......{ok}')
 
     with check_task():
-        cluster.start()
-        if not wait:
-            click.echo('Starting cluster...')
-            return
-        click.echo('Starting cluster...', nl=False)
-        start_waiter.wait(cluster=cluster.name, services=cluster.services)
+        cluster.start(services=[cluster.worker, cluster.web])
+        click.echo('Redeploying web/worker...', nl=False)
+        start_waiter.wait(cluster=cluster.name,
+                          services=[cluster.web, cluster.worker])
         click.echo("\033[1A")
         ok = click.style('OK', fg='green')
-        click.echo(f'Starting cluster...{ok}')
+        click.echo(f'Redeploying web/worker...{ok}')
+
+    with check_task():
+        cluster.start(services=[cluster.scheduler])
+        click.echo('Starting scheduler.......', nl=False)
+        start_waiter.wait(cluster=cluster.name, services=[cluster.scheduler])
+        click.echo("\033[1A")
+        ok = click.style('OK', fg='green')
+        click.echo(f'Starting scheduler.......{ok}')
+
+
+@main.command()
+@click.confirmation_option(prompt='Are you sure you want to stop the '
+                                  'scheduler?')
+@click.option('--wait/--no-wait', default=True,
+              help='Wait for the scheduler to stop. This is the default '
+                   'behavior.')
+@click.pass_context
+def stop_scheduler(ctx, wait):
+    """Stop the scheduler service.
+
+    Only one Airflow scheduler can be running at a time. During a new
+    service redeploy through Terraform this would result in a brief period
+    where two schedulers are running simultaneously. The process for
+    deploying a new service should be to use this command to stop the
+    scheduler, then deploy the new service through Terraform, then run the
+    start-scheduler command.
+    """
+    cluster = ctx.obj['cluster']
+    stop_waiter = boto_waiter.create_waiter_with_client('ServiceDrained',
+                                                        ecs_model, cluster.ecs)
+    with check_task():
+        cluster.stop(services=[cluster.scheduler])
+        click.echo('Stopping scheduler...', nl=False)
+        if not wait:
+            return
+        stop_waiter.wait(cluster=cluster.name, services=[cluster.scheduler])
+        click.echo("\033[1A")
+        ok = click.style('OK', fg='green')
+        click.echo(f'Stopping scheduler...{ok}')
+
+
+@main.command()
+@click.option('--wait/--no-wait', default=True,
+              help='Wait for scheduler to start. This is the default '
+                   'behavior.')
+@click.pass_context
+def start_scheduler(ctx, wait):
+    """Start the scheduler service.
+
+    This should only be necessary after running the stop-scheduler
+    command, though it should be safe to run even if the scheduler is
+    already running. This simply sets the desiredCount of the scheduler
+    service to 1.
+    """
+    cluster = ctx.obj['cluster']
+    start_waiter = cluster.ecs.get_waiter('services_stable')
+    with check_task():
+        cluster.start(services=[cluster.scheduler])
+        click.echo('Starting scheduler...', nl=False)
+        if not wait:
+            return
+        start_waiter.wait(cluster=cluster.name, services=[cluster.scheduler])
+        click.echo("\033[1A")
+        ok = click.style('OK', fg='green')
+        click.echo(f'Starting scheduler...{ok}')
 
 
 @contextmanager
