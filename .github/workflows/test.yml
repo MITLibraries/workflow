@@ -1,0 +1,22 @@
+name: Tests
+on: push
+jobs:
+  test:
+    name: Run tests
+    env:
+      COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tox: [flake8, safety, py37, coveralls]
+    steps:
+      - uses: actions/checkout@master
+      - name: Setup python
+        uses: actions/setup-python@v1
+        with:
+          python-version: '3.7'
+          architecture: x64
+      - name: Install tox
+        run: pip install tox
+      - name: Run tox env
+        run: tox -e ${{ matrix.tox }}
