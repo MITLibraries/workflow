@@ -1,0 +1,51 @@
+name: Deploy
+on:
+  push:
+    branches:
+      - master
+env:
+  AWS_DEFAULT_REGION: us-east-1
+jobs:
+  test:
+    name: Run tests
+    env:
+      COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tox: [flake8, safety, py37, coveralls]
+    steps:
+      - uses: actions/checkout@master
+      - name: Setup python
+        uses: actions/setup-python@v1
+        with:
+          python-version: '3.7'
+          architecture: x64
+      - name: Install tox
+        run: pip install tox
+      - name: Run tox env
+        run: tox -e ${{ matrix.tox }}
+  deploy:
+    name: Deploy new workflow image
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    needs: test
+    steps:
+      - uses: actions/checkout@master
+      - name: Setup python
+        uses: actions/setup-python@v1
+        with:
+          python-version: '3.7'
+          architecture: x64
+      - name: Install dependencies
+        run: |
+          python3.7 -m pip install pipenv awscli
+          make install
+      - name: Build container
+        run: make dist
+      - name: Publish container
+        run: make publish
+      - name: Redeploy cluster
+        run: pipenv run workflow redeploy --yes
