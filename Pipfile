@@ -11,12 +11,12 @@ coveralls = "*"
 
 [packages]
 apache-airflow = {extras = ["celery", "crypto", "password", "postgres"],version = "~=1.10.0"}
-psycopg2 = "*"
 click = "*"
-boto3 = "*"
 redis = "*"
 jmespath = "*"
 colorama = "*"
+psycopg2-binary = "*"
+boto3 = "*"
 
 [requires]
 python_version = "3.7"
