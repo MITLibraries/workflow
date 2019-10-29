@@ -4,6 +4,8 @@ import boto3
 
 
 class ECSOperator(BaseOperator):
+    template_fields = ['overrides']
+
     @apply_defaults
     def __init__(self,
                  cluster,
