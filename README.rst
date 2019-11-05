@@ -78,6 +78,20 @@ If your workflow needs specific Python dependencies, you will need to install th
   $ make dist
   $ docker-compose down && docker-compose up
 
+There are a few required environment variables when working with container based workflows locally. You can set them in your shell or in a ``.env`` file.
+
+Please ask on our ``#engineering`` Slack channel if you need these values.
+
+- ``AWS_ACCESS_KEY_ID``: use a key and secret that has the roles necessary for whatever you are doing.
+- ``AWS_SECRET_ACCESS_KEY``
+- ``AWS_DEFAULT_REGION``: ``us-east-1`` is likely what you want
+- ``ECS_CLUSTER``: for development, likely ``airflow-stage``
+- ``ECS_NETWORK_CONFIG``: ask for this
+
+Additionally, some workflows may require configuration. Please document those here:
+
+- ``ES_URL``: elasticsearch URL. For development, the staging url is appropriate. 
+
 Cluster Maintenance
 -------------------
 
