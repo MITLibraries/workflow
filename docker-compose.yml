@@ -16,6 +16,12 @@ services:
       AIRFLOW__CELERY__RESULT_BACKEND: "db+postgresql://postgres@db/postgres"
       AIRFLOW__CORE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://postgres@db/postgres"
       AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: 30
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+      AWS_DEFAULT_REGION: "${AWS_DEFAULT_REGION}"
+      ECS_CLUSTER: "${ECS_CLUSTER}"
+      ECS_NETWORK_CONFIG: "${ECS_NETWORK_CONFIG}"
+      ES_URL: "${ES_URL}"
     command: ["webserver"]
     volumes:
       - type: bind
@@ -35,6 +41,12 @@ services:
       AIRFLOW__CORE__EXECUTOR: "CeleryExecutor"
       AIRFLOW__CELERY__BROKER_URL: "redis://redis:6379"
       AIRFLOW__CELERY__RESULT_BACKEND: "db+postgresql://postgres@db/postgres"
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+      AWS_DEFAULT_REGION: "${AWS_DEFAULT_REGION}"
+      ECS_CLUSTER: "${ECS_CLUSTER}"
+      ECS_NETWORK_CONFIG: "${ECS_NETWORK_CONFIG}"
+      ES_URL: "${ES_URL}"
     command: ["scheduler"]
     volumes:
       - type: bind
@@ -54,6 +66,12 @@ services:
       AIRFLOW__CORE__EXECUTOR: "CeleryExecutor"
       AIRFLOW__CELERY__BROKER_URL: "redis://redis:6379"
       AIRFLOW__CELERY__RESULT_BACKEND: "db+postgresql://postgres@db/postgres"
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+      AWS_DEFAULT_REGION: "${AWS_DEFAULT_REGION}"
+      ECS_CLUSTER: "${ECS_CLUSTER}"
+      ECS_NETWORK_CONFIG: "${ECS_NETWORK_CONFIG}"
+      ES_URL: "${ES_URL}"
     command: ["worker"]
     volumes:
       - type: bind
