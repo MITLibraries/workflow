@@ -58,7 +58,11 @@ The ``ECSOperator`` needs a few arguments that have to be provided at runtime fr
   
   json.loads(base64.b64decode(os.getenv('ECS_NETWORK_CONFIG')))
 
-to retrieve the network configuration. The ``task_definition`` will need to be manually configured after the task has been created in Terraform. There is an example workflow (``example_ecs.py``) in the root of this repo.
+to retrieve the network configuration. The ``task_definition`` will need to be manually configured after the task has been created in Terraform. It is almost certain that you will have both a staging and prod version of your task definition. An ``AIRFLOW_ENVIRONMENT`` envvar is available in your workflow definition to create a switch for this (and anything else you might need it for). The two possible values are ``prod`` and ``stage``::
+
+  task_def = f"mytask-def-{os.environ['AIRFLOW_ENVIRONMENT']}"
+
+There is an example workflow (``example_ecs.py``) in the root of this repo.
 
 
 Developing Locally
