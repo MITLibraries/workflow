@@ -114,10 +114,9 @@ def rotate_fernet_key(ctx):
 
 
 @main.command()
-@click.confirmation_option(prompt='Are you sure you want to initialize '
-                                  'Airflow in the selected environment?')
+@click.option('--yes', is_flag=True, help='Do not prompt for confirmation.')
 @click.pass_context
-def initialize(ctx):
+def initialize(ctx, yes):
     """Initialize a Fargate Airflow cluster.
 
     This should only be run once on an Airflow cluster. It will run Airflow's
@@ -129,16 +128,20 @@ def initialize(ctx):
         $ workflow --cluster airflow-stage initialize
     """
     cluster = ctx.obj['cluster']
+    if not yes:
+        selected = click.style(cluster.name, fg='yellow', bold=True)
+        click.confirm(
+            f'Are you sure you want to initialize the {selected} cluster?',
+            abort=True)
     with check_task():
         resp = cluster.run_task({'command': ['initdb']})
     click.echo(f'Task scheduled: {resp}')
 
 
 @main.command()
-@click.confirmation_option(prompt='Are you sure you want to redeploy the '
-                                  'selected cluster?')
+@click.option('--yes', is_flag=True, help='Do not prompt for confirmation.')
 @click.pass_context
-def redeploy(ctx):
+def redeploy(ctx, yes):
     """Redeploy Airflow cluster.
 
     This will perform a full redeploy of the Airflow cluster. The cluster
@@ -160,6 +163,11 @@ def redeploy(ctx):
         $ workflow --cluster airflow-prod redeploy
     """
     cluster = ctx.obj['cluster']
+    if not yes:
+        selected = click.style(cluster.name, fg='yellow', bold=True)
+        click.confirm(
+            f'Are you sure you want to redeploy the {selected} cluster?',
+            abort=True)
     stop_waiter = boto_waiter.create_waiter_with_client('ServiceDrained',
                                                         ecs_model, cluster.ecs)
     start_waiter = cluster.ecs.get_waiter('services_stable')
@@ -190,13 +198,12 @@ def redeploy(ctx):
 
 
 @main.command()
-@click.confirmation_option(prompt='Are you sure you want to stop the '
-                                  'scheduler?')
+@click.option('--yes', is_flag=True, help='Do not prompt for confirmation.')
 @click.option('--wait/--no-wait', default=True,
               help='Wait for the scheduler to stop. This is the default '
                    'behavior.')
 @click.pass_context
-def stop_scheduler(ctx, wait):
+def stop_scheduler(ctx, wait, yes):
     """Stop the scheduler service.
 
     Only one Airflow scheduler can be running at a time. During a new
@@ -207,6 +214,12 @@ def stop_scheduler(ctx, wait):
     start-scheduler command.
     """
     cluster = ctx.obj['cluster']
+    if not yes:
+        selected = click.style(cluster.name, fg='yellow', bold=True)
+        click.confirm(
+            f'Are you sure you want to stop the scheduler in the {selected} '
+            'cluster?',
+            abort=True)
     stop_waiter = boto_waiter.create_waiter_with_client('ServiceDrained',
                                                         ecs_model, cluster.ecs)
     with check_task():
