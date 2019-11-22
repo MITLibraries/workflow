@@ -106,3 +106,11 @@ def test_starts_scheduler(cluster, cluster_opts):
             'start-scheduler',
             '--no-wait'])
     assert 'Starting scheduler...' in res.output
+
+
+def test_uses_default_service_name(cluster):
+    res = CliRunner().invoke(main, [
+            '--cluster', cluster.name,
+            'stop-scheduler',
+            '--yes'])
+    assert 'Stopping scheduler...OK' in res.output

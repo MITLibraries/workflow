@@ -30,7 +30,8 @@ def cluster():
     Also see the ``patch_cluster_config`` fixture below.
     """
     C = namedtuple('C', ['name', 'scheduler', 'worker', 'web'])
-    cluster = C('airflow-test', 'scheduler', 'worker', 'web')
+    cluster = C('airflow-test', 'airflow-test-scheduler',
+                'airflow-test-worker', 'airflow-test-web')
     with mock_ecs(), mock_ec2():
         ec2_client = boto3.client('ec2')
         ec2 = boto3.resource('ec2')

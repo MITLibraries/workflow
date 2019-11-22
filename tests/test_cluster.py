@@ -6,7 +6,8 @@ from manager.cluster import Cluster
 
 def test_run_task_returns_taskarn(cluster):
     ecs = boto3.client('ecs')
-    c = Cluster('airflow-test', 'scheduler', 'worker', 'web', ecs)
+    c = Cluster('airflow-test', 'airflow-test-scheduler',
+                'airflow-test-worker', 'airflow-test-web', ecs)
     assert c.run_task({'command': ['run_things']})\
         .startswith('arn:aws:ecs:us-east-1:012345678910:task/')
 
