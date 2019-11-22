@@ -11,13 +11,13 @@ from manager.cluster import Cluster, ecs_model
 @click.group()
 @click.option('--cluster', default='airflow-stage',
               help='Fargate cluster name. Defaults to airflow-stage.')
-@click.option('--scheduler', default='airflow-stage-scheduler',
+@click.option('--scheduler',
               help='Name of scheduler service. Defaults to '
-                   'airflow-stage-scheduler.')
-@click.option('--worker', default='airflow-stage-worker',
-              help='Name of worker service. Defaults to airflow-stage-worker.')
-@click.option('--web', default='airflow-stage-web',
-              help='Name of web service. Defaults to airflow-stage-web.')
+                   'CLUSTER-scheduler.')
+@click.option('--worker',
+              help='Name of worker service. Defaults to CLUSTER-worker.')
+@click.option('--web',
+              help='Name of web service. Defaults to CLUSTER-web.')
 @click.pass_context
 def main(ctx, cluster, scheduler, worker, web):
     """Run one-off tasks on a Fargate Airflow cluster.
@@ -32,7 +32,18 @@ def main(ctx, cluster, scheduler, worker, web):
 
     The tool only schedules a task to be run. Check the AWS console to see
     if the container ran successfully.
+
+    The three options for specifying service names should not generally be
+    necessary. Our naming is consistent and predictable across staging
+    and production. Simply specifying the cluster name should be enough to
+    infer the correct service names.
     """
+    if not scheduler:
+        scheduler = f'{cluster}-scheduler'
+    if not worker:
+        worker = f'{cluster}-worker'
+    if not web:
+        web = f'{cluster}-web'
     ecs = boto3.client('ecs')
     cluster = Cluster(cluster, scheduler, worker, web, ecs)
     ctx.ensure_object(dict)
