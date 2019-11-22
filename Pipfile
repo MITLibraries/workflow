@@ -10,7 +10,7 @@ pytest-cov = "*"
 coveralls = "*"
 
 [packages]
-apache-airflow = {extras = ["celery", "crypto", "password", "postgres"],version = "~=1.10.0"}
+apache-airflow = {extras = ["celery", "crypto", "password", "postgres"],version = "~=1.10.6"}
 click = "*"
 redis = "*"
 jmespath = "*"
