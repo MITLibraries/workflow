@@ -16,11 +16,12 @@ from airflow.hooks.S3_hook import S3Hook
 network_config = json.loads(base64.b64decode(os.getenv('ECS_NETWORK_CONFIG')))
 cluster = os.getenv('ECS_CLUSTER')
 es_url = os.getenv('ES_URL')
+air_env = os.getenv('AIRFLOW_ENVIRONMENT')
 
 
 def set_s3():
     today = datetime.utcnow().strftime('%Y-%m-%d-%H-%M-%S')
-    s3_key = "s3://aspace-oai-s3-stage/{file}.xml".format(file=today)
+    s3_key = f"s3://aspace-oai-s3-{air_env}/{today}.xml"
     logging.info(s3_key)
     return s3_key
 
@@ -50,13 +51,12 @@ set_s3 = PythonOperator(
 harvest = ECSOperator(task_id='harvest_step_1',
                       dag=dag,
                       cluster=cluster,
-                      task_definition='airflow-stage-oaiharvester',
+                      task_definition=f"airflow-{air_env}-oaiharvester",
                       overrides={'containerOverrides': [{
                                  'command': ["--out={{ task_instance.xcom_pull(task_ids='set_s3') }}",
                                              '--host=https://archivesspace.mit.edu/oai',
-                                             '--format=oai_ead',
-                                             '--verbose', ],
-                                 'name': 'airflow-stage-oaiharvester',
+                                             '--format=oai_ead', ],
+                                 'name': f"airflow-{air_env}-oaiharvester",
                                  }]},
                       network_configuration=network_config)
 
@@ -79,16 +79,17 @@ no_records_to_harvest = DummyOperator(
 ingest = ECSOperator(task_id='harvest_step_3',
                      dag=dag,
                      cluster=cluster,
-                     task_definition='airflow-stage-mario',
+                     task_definition=f"airflow-{air_env}-mario",
                      overrides={'containerOverrides': [{
-                                  'command': ['--url=' + es_url,
+                                  'command': [f"--url={es_url}",
+                                              '--index=aspace_2019_12',
                                               'ingest',
                                               '--prefix=aspace',
                                               '--type=archives',
                                               '--auto',
                                               '--debug',
                                               "{{ task_instance.xcom_pull(task_ids='set_s3') }}", ],
-                                  'name': 'airflow-stage-mario',
+                                  'name': f"airflow-{air_env}-mario",
                                   }]},
                      network_configuration=network_config)
 

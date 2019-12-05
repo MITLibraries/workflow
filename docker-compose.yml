@@ -17,6 +17,7 @@ services:
       AIRFLOW__CORE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://postgres@db/postgres"
       AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: 30
       AIRFLOW__SCHEDULER__CATCHUP_BY_DEFAULT: "False"
+      AIRFLOW_ENVIRONMENT: "stage"
       AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
       AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
       AWS_DEFAULT_REGION: "${AWS_DEFAULT_REGION}"
@@ -43,6 +44,7 @@ services:
       AIRFLOW__CORE__EXECUTOR: "CeleryExecutor"
       AIRFLOW__CELERY__BROKER_URL: "redis://redis:6379"
       AIRFLOW__CELERY__RESULT_BACKEND: "db+postgresql://postgres@db/postgres"
+      AIRFLOW_ENVIRONMENT: "stage"
       AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
       AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
       AWS_DEFAULT_REGION: "${AWS_DEFAULT_REGION}"
@@ -69,6 +71,7 @@ services:
       AIRFLOW__CORE__EXECUTOR: "CeleryExecutor"
       AIRFLOW__CELERY__BROKER_URL: "redis://redis:6379"
       AIRFLOW__CELERY__RESULT_BACKEND: "db+postgresql://postgres@db/postgres"
+      AIRFLOW_ENVIRONMENT: "stage"
       AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
       AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
       AWS_DEFAULT_REGION: "${AWS_DEFAULT_REGION}"
