@@ -10,13 +10,14 @@ pytest-cov = "*"
 coveralls = "*"
 
 [packages]
-apache-airflow = {extras = ["celery", "crypto", "password", "postgres"],version = "~=1.10.6"}
+apache-airflow = {extras = ["celery", "crypto", "password", "postgres"],version = "~=1.10.11"}
 click = "*"
 redis = "*"
 jmespath = "*"
 colorama = "*"
 psycopg2-binary = "*"
 boto3 = "*"
+marshmallow-sqlalchemy = "~=0.23.0" ## This fixes a transitive dependency problem with airflow. Remove this line when upgrading airflow beyond 1.10.12
 
 [requires]
 python_version = "3.7"
