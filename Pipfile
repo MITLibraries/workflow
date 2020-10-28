@@ -8,6 +8,7 @@ pytest = "*"
 moto = "*"
 pytest-cov = "*"
 coveralls = "*"
+flake8 = "*"
 
 [packages]
 apache-airflow = {extras = ["celery", "crypto", "password", "postgres"],version = "~=1.10.11"}
@@ -20,7 +21,7 @@ boto3 = "*"
 marshmallow-sqlalchemy = "~=0.23.0" ## This fixes a transitive dependency problem with airflow. Remove this line when upgrading airflow beyond 1.10.12
 
 [requires]
-python_version = "3.7"
+python_version = "3.8"
 
 [scripts]
 workflow = "python -c \"from manager.cli import main; main()\""
