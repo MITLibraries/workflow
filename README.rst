@@ -107,6 +107,8 @@ This repo provides a ``workflow`` command for doing various maintenance tasks on
 Deployment Notes
 ----------------
 
+The cluster can be redeployed by running ``make stage`` or ``make prod``. The ``stage`` target will build a new container from the local version, push that container to the stage container repo and redeploy the cluster with that new image. The ``prod`` target will pull the latest image from the stage container repo, push that to the prod container repo and redeploy the production cluster.
+
 There are a number of unanswered questions about our deployment. I suspect some of these will have to be answered through experience.
 
 - There's a note in the Airflow docs about setting the visibility timeout:
