@@ -13,11 +13,17 @@ services:
       AIRFLOW__CELERY__BROKER_URL: "redis://redis:6379"
       AIRFLOW__CELERY__RESULT_BACKEND: "db+postgresql://postgres@db/postgres"
     command: ["initdb"]
+    networks:
+      - airflow_init
   db:
    image: postgres
    volumes:
      - type: volume
        source: db
        target: /var/lib/postgresql/data
+   networks:
+     - airflow_init
 volumes:
   db:
+networks:
+  airflow_init:
