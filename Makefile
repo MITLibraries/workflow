@@ -37,13 +37,13 @@ dist: ## Build docker container
 		-t airflow .
 
 stage: dist ## Build new container and redeploy staging cluster
-	$$(aws ecr get-login --no-include-email --region us-east-1)
+	docker login -u AWS -p $$(aws ecr get-login-password --region us-east-1) $(ECR_REGISTRY)
 	docker push $(ECR_REGISTRY)/airflow-stage:latest
 	docker push $(ECR_REGISTRY)/airflow-stage:`git describe --always`
 	pipenv run workflow redeploy --yes
 
 prod: ## Deploy current staging build to production
-	$$(aws ecr get-login --no-include-email --region us-east-1)
+	docker login -u AWS -p $$(aws ecr get-login-password --region us-east-1) $(ECR_REGISTRY)
 	docker pull $(ECR_REGISTRY)/airflow-stage:latest
 	docker tag $(ECR_REGISTRY)/airflow-stage:latest $(ECR_REGISTRY)/airflow-prod:latest
 	docker tag $(ECR_REGISTRY)/airflow-stage:latest $(ECR_REGISTRY)/airflow-prod:$(DATETIME)
