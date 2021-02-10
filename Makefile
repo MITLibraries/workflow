@@ -24,7 +24,7 @@ flake8:
 	pipenv run flake8 manager tests mit
 
 safety:
-	pipenv check
+	pipenv check --ignore 39462
 
 check: flake8 safety ## Run linting, security checks
 
