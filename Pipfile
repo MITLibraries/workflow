@@ -11,7 +11,7 @@ coveralls = "*"
 flake8 = "*"
 
 [packages]
-apache-airflow = {extras = ["celery", "crypto", "password", "postgres"],version = "~=1.10.14"}
+apache-airflow = {extras = ["celery", "crypto", "password", "postgres"],version = "~=1.10.15"}
 click = "*"
 redis = "*"
 jmespath = "*"
