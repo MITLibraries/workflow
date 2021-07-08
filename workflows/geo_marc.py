@@ -25,9 +25,8 @@ dag = DAG('geoweb_marc_load',
 def get_filepath():
     s3 = boto3.resource('s3')
     b = s3.Bucket(bucket)
-    prefix = datetime.utcnow().strftime('%Y%m01')
-    fnames = [o.key for o in b.objects.filter(Prefix=prefix)
-              if o.key.endswith('edsall.mrc')]
+    prefix = f"ALMA_FULL_EXPORT_{datetime.utcnow().strftime('%Y-%m')}"
+    fnames = [o.key for o in b.objects.filter(Prefix=prefix)]
     return f's3://{bucket}/{fnames[0]}'
 
 
